@@ -1,0 +1,57 @@
+# ============================================================
+# AI Meeting Assistant — Requirements
+# ============================================================
+# Python >= 3.10 recommended
+
+# ── Audio / Video Download ───────────────────────────────────
+yt-dlp>=2024.4.9               # Download audio from YouTube URLs
+pydub>=0.25.1                  # Audio slicing / format conversion
+ffmpeg-python>=0.2.0           # FFmpeg bindings (ffmpeg binary required separately)
+
+# ── Speech-to-Text (local Whisper) ───────────────────────────
+openai-whisper>=20231117       # Local Whisper transcription
+torch>=2.2.0                   # PyTorch backend for Whisper
+torchaudio>=2.2.0              # Audio utilities for Torch
+
+# ── Translation (Hindi → English) ────────────────────────────
+deep-translator>=1.11.4        # Lightweight translation via Google/DeepL APIs
+langdetect>=1.0.9              # Language detection before translation
+
+# ── LLM Orchestration — LangChain LCEL + Mistral ─────────────
+langchain>=0.2.0
+langchain-core>=0.2.0
+langchain-community>=0.2.0
+langchain-mistralai>=0.1.0     # Mistral chat model integration
+mistralai>=0.4.0               # Mistral Python SDK (free-tier API)
+
+# ── RAG Pipeline ─────────────────────────────────────────────
+chromadb>=0.5.0                # Vector store for transcript chunks
+sentence-transformers>=2.7.0   # HuggingFace embedding models
+langchain-huggingface>=0.0.3   # HuggingFace embeddings via LangChain
+huggingface-hub>=0.23.0        # Model downloads / Hub API
+
+# ── Text Splitting / Document Utilities ──────────────────────
+tiktoken>=0.7.0                # Token counting for chunk sizing
+
+# ── Streamlit UI ─────────────────────────────────────────────
+streamlit>=1.35.0              # Main web UI framework
+streamlit-chat>=0.1.1          # Chat message components
+watchdog>=4.0.0                # File-system watcher (Streamlit hot-reload)
+
+# ── Export — PDF ─────────────────────────────────────────────
+reportlab>=4.2.0               # Generate PDF exports
+
+# ── Export — TXT (stdlib, no extra package needed) ───────────
+# Uses Python built-in `open()` / `pathlib`
+
+# ── General Utilities ────────────────────────────────────────
+python-dotenv>=1.0.1           # Load .env for API keys
+pydantic>=2.7.0                # Data validation (used by LangChain internally)
+numpy>=1.26.0                  # Numerical ops (Whisper / embeddings dependency)
+tqdm>=4.66.0                   # Progress bars
+requests>=2.31.0               # HTTP calls
+
+# ── Dev / Optional ───────────────────────────────────────────
+# Uncomment if you want a local Jupyter notebook for experimentation:
+# ipykernel>=6.29.0
+# notebook>=7.2.0
