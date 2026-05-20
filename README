@@ -11,6 +11,7 @@ An AI-powered meeting intelligence system that automatically transcribes, summar
 💬 Chat with your meeting using RAG + ChromaDB
 📄 Export reports as PDF or TXT
 ⚡ Fully local AI pipeline with minimal API cost
+
 🛠️ Tech Stack
 Category	Technologies
 Language	Python
@@ -21,6 +22,8 @@ Vector Database	ChromaDB
 Embeddings	HuggingFace Embeddings
 Audio Processing	yt-dlp, FFmpeg
 Export	fpdf2
+
+
 🏗️ System Architecture
 YouTube/File Input
         ↓
@@ -37,6 +40,8 @@ YouTube/File Input
  RAG-based Chat System
         ↓
  PDF/TXT Export
+
+
 📂 Project Structure
 AI-Video-Assistant/
 │
@@ -56,6 +61,7 @@ AI-Video-Assistant/
 ├── vector_db/
 ├── assets/
 └── README.md
+
 ⚙️ Installation
 1️⃣ Clone Repository
 git clone https://github.com/your-username/AI-Video-Assistant.git
@@ -70,7 +76,6 @@ source .venv/bin/activate
 pip install -r requirements.txt
 4️⃣ Install FFmpeg
 Windows
-
 Download FFmpeg and add it to PATH.
 
 Ubuntu/Linux
@@ -78,11 +83,11 @@ sudo apt install ffmpeg
 🔑 Environment Variables
 
 Create a .env file:
-
 MISTRAL_API_KEY=your_api_key
 SARVAM_API_KEY=your_api_key
 ▶️ Run the Application
 streamlit run app.py
+
 💡 Use Cases
 Meeting transcription
 Interview analysis
@@ -90,8 +95,8 @@ Lecture summarization
 Podcast summarization
 AI-powered note-taking
 Team collaboration & follow-ups
-📸 Demo Features
 
+📸 Demo Features
 ✅ Meeting Summary
 ✅ Action Item Extraction
 ✅ Decision Tracking
@@ -105,15 +110,13 @@ Speaker diarization
 Multi-language translation
 Cloud deployment support
 Team workspace integration
-🤝 Contributing
 
+🤝 Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss improvements.
 
 📜 License
-
 This project is licensed under the MIT License.
 
 👨‍💻 Author
-
 Anshuman Lawankar
 AI & Full-Stack Developer
