@@ -1,0 +1,119 @@
+AI Video Assistant
+
+An AI-powered meeting intelligence system that automatically transcribes, summarizes, and lets users chat with meeting recordings using RAG (Retrieval-Augmented Generation). Supports YouTube videos, MP3, MP4, and WAV files with multilingual transcription for English, Hindi, and Hinglish.
+
+🚀 Features
+🎙️ Upload audio/video files or paste YouTube URLs
+🧠 Automatic meeting transcription using Whisper AI
+🌍 Hindi & Hinglish transcription support with Sarvam AI
+📝 AI-generated meeting summaries in bullet points
+✅ Extracts action items, key decisions, and follow-ups
+💬 Chat with your meeting using RAG + ChromaDB
+📄 Export reports as PDF or TXT
+⚡ Fully local AI pipeline with minimal API cost
+🛠️ Tech Stack
+Category	Technologies
+Language	Python
+Frontend	Streamlit
+AI Models	OpenAI Whisper, Mistral AI, Sarvam AI
+RAG Framework	LangChain LCEL
+Vector Database	ChromaDB
+Embeddings	HuggingFace Embeddings
+Audio Processing	yt-dlp, FFmpeg
+Export	fpdf2
+🏗️ System Architecture
+YouTube/File Input
+        ↓
+ Audio Processing (yt-dlp + FFmpeg)
+        ↓
+ Speech-to-Text (Whisper / Sarvam AI)
+        ↓
+ Meeting Summarization (Mistral AI)
+        ↓
+ Embeddings Generation
+        ↓
+ ChromaDB Vector Storage
+        ↓
+ RAG-based Chat System
+        ↓
+ PDF/TXT Export
+📂 Project Structure
+AI-Video-Assistant/
+│
+├── app.py
+├── requirements.txt
+├── downloades/
+├── core/
+│   ├── transcription.py
+│   ├── summarizer.py
+│   ├── rag_engine.py
+│   └── export.py
+│
+├── utils/
+│   ├── audio_utils.py
+│   └── helper.py
+│
+├── vector_db/
+├── assets/
+└── README.md
+⚙️ Installation
+1️⃣ Clone Repository
+git clone https://github.com/your-username/AI-Video-Assistant.git
+cd AI-Video-Assistant
+2️⃣ Create Virtual Environment
+python -m venv .venv
+Windows
+.venv\Scripts\activate
+Mac/Linux
+source .venv/bin/activate
+3️⃣ Install Dependencies
+pip install -r requirements.txt
+4️⃣ Install FFmpeg
+Windows
+
+Download FFmpeg and add it to PATH.
+
+Ubuntu/Linux
+sudo apt install ffmpeg
+🔑 Environment Variables
+
+Create a .env file:
+
+MISTRAL_API_KEY=your_api_key
+SARVAM_API_KEY=your_api_key
+▶️ Run the Application
+streamlit run app.py
+💡 Use Cases
+Meeting transcription
+Interview analysis
+Lecture summarization
+Podcast summarization
+AI-powered note-taking
+Team collaboration & follow-ups
+📸 Demo Features
+
+✅ Meeting Summary
+✅ Action Item Extraction
+✅ Decision Tracking
+✅ Open Questions Detection
+✅ Semantic Search
+✅ Chat With Meeting
+
+📈 Future Improvements
+Real-time meeting transcription
+Speaker diarization
+Multi-language translation
+Cloud deployment support
+Team workspace integration
+🤝 Contributing
+
+Pull requests are welcome. For major changes, please open an issue first to discuss improvements.
+
+📜 License
+
+This project is licensed under the MIT License.
+
+👨‍💻 Author
+
+Anshuman Lawankar
+AI & Full-Stack Developer
