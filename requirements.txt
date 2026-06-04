@@ -21,6 +21,8 @@ langchain>=0.2.0
 langchain-core>=0.2.0
 langchain-community>=0.2.0
 langchain-mistralai>=0.1.0     # Mistral chat model integration
+langchain-chroma>=1.1.0        # Chroma vector store support
+langchain-text-splitters>=1.1.2 # Text splitting utilities
 mistralai>=0.4.0               # Mistral Python SDK (free-tier API)
 
 # ── RAG Pipeline ─────────────────────────────────────────────
