@@ -1,5 +1,15 @@
-import streamlit as st
+"""
+AI Video Assistant — app.py
+Premium Streamlit frontend for meeting intelligence.
+
+Design: Obsidian terminal aesthetic — fine-grain scanlines, razor-sharp
+        mono type, heated amber accents on a near-black ground.
+        Every element earns its pixel.
+"""
+
 import time
+import html
+import streamlit as st
 from dotenv import load_dotenv
 from utils.audio_processor import process_input
 from core.transcriber import transcribe_all
@@ -9,56 +19,80 @@ from core.rag_engine import build_rag_chain, ask_question
 
 load_dotenv()
 
-# ─── Page Config ────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────────────
+# PAGE CONFIG
+# ──────────────────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="AI Video Assistant",
-    page_icon="🎬",
+    page_title="Meridian — Meeting Intelligence",
+    page_icon="◈",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ─── Custom CSS ─────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────────────
+# GLOBAL CSS — Obsidian Terminal
+# ──────────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap');
+/* ── Imports ── */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
 
-/* ── Root Variables ── */
+/* ── Tokens ── */
 :root {
-    --bg: #0a0a0f;
-    --surface: #111118;
-    --surface-2: #1a1a25;
-    --border: #2a2a3a;
-    --accent: #7c3aed;
-    --accent-glow: #9f67ff;
-    --accent-2: #06b6d4;
-    --text: #e8e8f0;
-    --text-muted: #7070a0;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --danger: #ef4444;
+    --bg:          #0c0c0e;
+    --surface:     #121215;
+    --surface-2:   #18181d;
+    --surface-3:   #1e1e26;
+    --border:      rgba(255,255,255,0.07);
+    --border-hi:   rgba(255,255,255,0.13);
+    --amber:       #e8a245;
+    --amber-dim:   rgba(232,162,69,0.15);
+    --amber-glow:  rgba(232,162,69,0.08);
+    --teal:        #3ecfb2;
+    --teal-dim:    rgba(62,207,178,0.12);
+    --red:         #e85d5d;
+    --red-dim:     rgba(232,93,93,0.12);
+    --text:        #d8d8e8;
+    --text-mid:    #8888a8;
+    --text-dim:    #44445a;
+    --mono:        'IBM Plex Mono', monospace;
+    --sans:        'IBM Plex Sans', sans-serif;
+    --radius:      6px;
+    --radius-lg:   10px;
 }
 
-/* ── Global Reset ── */
+/* ── Base ── */
 html, body, [class*="css"] {
-    font-family: 'JetBrains Mono', monospace;
-    background-color: var(--bg) !important;
+    font-family: var(--mono) !important;
+    background: var(--bg) !important;
     color: var(--text) !important;
 }
+.stApp { background: var(--bg) !important; }
 
-.stApp {
-    background: var(--bg) !important;
+/* Fine scanline texture */
+.stApp::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.15) 2px,
+        rgba(0,0,0,0.15) 3px
+    );
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
 }
 
-/* Animated grid background */
+/* Corner grid dot */
 .stApp::before {
     content: '';
     position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background-image:
-        linear-gradient(rgba(124, 58, 237, 0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(124, 58, 237, 0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(232,162,69,0.04) 1px, transparent 1px);
+    background-size: 28px 28px;
     pointer-events: none;
     z-index: 0;
 }
@@ -67,479 +101,725 @@ html, body, [class*="css"] {
 [data-testid="stSidebar"] {
     background: var(--surface) !important;
     border-right: 1px solid var(--border) !important;
+    padding-top: 1.5rem !important;
 }
-
-[data-testid="stSidebar"] * {
-    color: var(--text) !important;
-}
+[data-testid="stSidebar"] * { color: var(--text) !important; }
+[data-testid="stSidebar"] .block-container { padding: 1rem 1.25rem !important; }
 
 /* ── Headings ── */
-h1, h2, h3, h4, h5, h6 {
-    font-family: 'Syne', sans-serif !important;
+h1,h2,h3,h4,h5,h6 {
+    font-family: var(--mono) !important;
     color: var(--text) !important;
+    letter-spacing: -0.02em !important;
 }
 
-/* ── Hero Title ── */
-.hero-title {
-    font-family: 'Syne', sans-serif;
-    font-size: clamp(2rem, 5vw, 3.5rem);
-    font-weight: 800;
-    line-height: 1.1;
-    margin: 0;
-    background: linear-gradient(135deg, #ffffff 0%, var(--accent-glow) 50%, var(--accent-2) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+/* ── Wordmark ── */
+.wordmark {
+    font-family: var(--mono);
+    font-size: 1.15rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--amber);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.15rem;
 }
-
-.hero-sub {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
-    color: var(--text-muted);
+.wordmark-glyph {
+    width: 24px; height: 24px;
+    border: 1.5px solid var(--amber);
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    color: var(--amber);
+    flex-shrink: 0;
+}
+.wordmark-sub {
+    font-family: var(--mono);
+    font-size: 0.65rem;
     letter-spacing: 0.2em;
+    color: var(--text-dim);
     text-transform: uppercase;
-    margin-top: 0.5rem;
+    margin-bottom: 1.5rem;
 }
 
-/* ── Cards ── */
+/* ── Section label ── */
+.section-label {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.section-label::before {
+    content: '';
+    display: inline-block;
+    width: 12px;
+    height: 1px;
+    background: var(--amber);
+    opacity: 0.5;
+}
+
+/* ── Inputs ── */
+.stTextInput > div > div > input,
+.stTextArea > div > div > textarea,
+.stSelectbox > div > div {
+    background: var(--surface-2) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius) !important;
+    color: var(--text) !important;
+    font-family: var(--mono) !important;
+    font-size: 0.82rem !important;
+    transition: border-color 0.2s !important;
+}
+.stTextInput > div > div > input:focus,
+.stTextArea > div > div > textarea:focus {
+    border-color: var(--amber) !important;
+    box-shadow: 0 0 0 2px var(--amber-glow) !important;
+    outline: none !important;
+}
+label {
+    font-family: var(--mono) !important;
+    font-size: 0.7rem !important;
+    letter-spacing: 0.08em !important;
+    color: var(--text-mid) !important;
+    text-transform: uppercase !important;
+}
+
+/* ── Primary button ── */
+.stButton > button {
+    background: transparent !important;
+    border: 1px solid var(--amber) !important;
+    border-radius: var(--radius) !important;
+    color: var(--amber) !important;
+    font-family: var(--mono) !important;
+    font-weight: 500 !important;
+    font-size: 0.78rem !important;
+    letter-spacing: 0.12em !important;
+    text-transform: uppercase !important;
+    padding: 0.55rem 1.25rem !important;
+    transition: background 0.18s, box-shadow 0.18s !important;
+    position: relative !important;
+}
+.stButton > button:hover {
+    background: var(--amber-dim) !important;
+    box-shadow: 0 0 16px var(--amber-glow) !important;
+}
+.stButton > button:active {
+    transform: scale(0.98) !important;
+}
+/* Secondary/clear variant */
+.stButton > button[kind="secondary"] {
+    border-color: var(--border-hi) !important;
+    color: var(--text-mid) !important;
+}
+.stButton > button[kind="secondary"]:hover {
+    background: var(--surface-3) !important;
+    box-shadow: none !important;
+}
+
+/* ── Hero ── */
+.hero {
+    padding: 0.5rem 0 1.5rem;
+}
+.hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--amber);
+    opacity: 0.7;
+    margin-bottom: 0.35rem;
+}
+.hero-title {
+    font-family: var(--mono);
+    font-size: clamp(1.6rem, 3.5vw, 2.6rem);
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    color: var(--text);
+    margin: 0;
+}
+.hero-title span { color: var(--amber); }
+.hero-sub {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--text-mid);
+    margin-top: 0.5rem;
+    letter-spacing: 0.02em;
+}
+
+/* ── Info cards ── */
 .card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin-bottom: 1rem;
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.35rem;
+    margin-bottom: 0.75rem;
     position: relative;
     overflow: hidden;
     transition: border-color 0.2s;
 }
-
-.card:hover {
-    border-color: var(--accent);
-}
-
-.card::before {
-    content: '';
+.card:hover { border-color: var(--border-hi); }
+.card-accent {
     position: absolute;
     top: 0; left: 0;
-    width: 3px; height: 100%;
-    background: linear-gradient(180deg, var(--accent), var(--accent-2));
+    width: 2px; height: 100%;
+    background: var(--amber);
+    opacity: 0.6;
+}
+.card-accent.teal  { background: var(--teal); }
+.card-accent.red   { background: var(--red); }
+.card-label {
+    font-family: var(--mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.card-body {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    line-height: 1.75;
+    color: var(--text);
+    white-space: pre-wrap;
 }
 
-.card-title {
-    font-family: 'Syne', sans-serif;
-    font-size: 0.7rem;
-    font-weight: 700;
+/* ── Session title banner ── */
+.session-banner {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--amber);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.35rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+.session-id {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    color: var(--amber);
+    opacity: 0.7;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.session-title-text {
+    font-family: var(--mono);
+    font-size: 1.05rem;
+    font-weight: 500;
+    color: var(--text);
+    letter-spacing: -0.01em;
+}
+
+/* ── Transcript scroll ── */
+.transcript-scroll {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    line-height: 1.85;
+    max-height: 280px;
+    overflow-y: auto;
+    color: var(--text-mid);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* ── Pipeline step bars ── */
+.step-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.55rem 0.8rem;
+    border-radius: var(--radius);
+    margin: 0.22rem 0;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-mid);
+    border: 1px solid transparent;
+    transition: border-color 0.2s;
+}
+.step-row.active {
+    border-color: var(--border);
+    background: var(--surface-2);
+    color: var(--amber);
+}
+.step-row.done {
+    color: var(--teal);
+}
+.pip {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    flex-shrink: 0;
+}
+.pip.active { background: var(--amber); box-shadow: 0 0 6px var(--amber); animation: blink 1.4s infinite; }
+.pip.done   { background: var(--teal); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+/* ── Chat ── */
+.chat-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.1rem;
+    max-height: 400px;
+    overflow-y: auto;
+    margin-bottom: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+.cmsg { display: flex; flex-direction: column; gap: 0.15rem; }
+.cmsg-label {
+    font-family: var(--mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+.cmsg-label.you { color: var(--amber); opacity: 0.7; text-align: right; }
+.cmsg-label.bot { color: var(--teal); opacity: 0.7; }
+.cbubble {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    line-height: 1.65;
+    padding: 0.6rem 0.9rem;
+    border-radius: var(--radius);
+    max-width: 88%;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.cbubble.you {
+    background: var(--amber-dim);
+    border: 1px solid rgba(232,162,69,0.18);
+    align-self: flex-end;
+    color: var(--text);
+}
+.cbubble.bot {
+    background: var(--teal-dim);
+    border: 1px solid rgba(62,207,178,0.15);
+    align-self: flex-start;
+    color: var(--text);
+}
+
+/* ── Chat section heading ── */
+.chat-heading {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    font-weight: 500;
     letter-spacing: 0.15em;
     text-transform: uppercase;
-    color: var(--text-muted);
-    margin-bottom: 0.75rem;
+    color: var(--text-mid);
+    margin: 0.5rem 0 0.75rem;
     display: flex;
     align-items: center;
     gap: 0.5rem;
 }
-
-.card-content {
-    font-size: 0.875rem;
-    line-height: 1.7;
-    color: var(--text);
+.chat-heading::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
 }
 
-/* ── Accent Badge ── */
-.badge {
-    display: inline-block;
-    padding: 0.2rem 0.6rem;
-    border-radius: 4px;
-    font-size: 0.65rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-}
-
-.badge-purple { background: rgba(124,58,237,0.2); color: var(--accent-glow); border: 1px solid rgba(124,58,237,0.3); }
-.badge-cyan   { background: rgba(6,182,212,0.15); color: var(--accent-2);    border: 1px solid rgba(6,182,212,0.3); }
-.badge-green  { background: rgba(16,185,129,0.15); color: var(--success);    border: 1px solid rgba(16,185,129,0.3); }
-
-/* ── Input & Buttons ── */
-.stTextInput > div > div > input,
-.stSelectbox > div > div {
-    background: var(--surface-2) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 8px !important;
-    color: var(--text) !important;
-    font-family: 'JetBrains Mono', monospace !important;
-}
-
-.stTextInput > div > div > input:focus {
-    border-color: var(--accent) !important;
-    box-shadow: 0 0 0 2px rgba(124,58,237,0.2) !important;
-}
-
-.stButton > button {
-    background: linear-gradient(135deg, var(--accent), #5b21b6) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 8px !important;
-    font-family: 'Syne', sans-serif !important;
-    font-weight: 700 !important;
-    font-size: 0.875rem !important;
-    letter-spacing: 0.05em !important;
-    padding: 0.6rem 1.5rem !important;
-    transition: all 0.2s !important;
-    text-transform: uppercase !important;
-}
-
-.stButton > button:hover {
-    transform: translateY(-1px) !important;
-    box-shadow: 0 8px 25px rgba(124,58,237,0.4) !important;
-}
-
-/* Secondary button */
-.stButton > button[kind="secondary"] {
-    background: var(--surface-2) !important;
-    border: 1px solid var(--border) !important;
-}
-
-/* ── Progress / Status ── */
-.status-bar {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    background: var(--surface-2);
-    border-radius: 8px;
-    margin: 0.4rem 0;
-    border: 1px solid var(--border);
-    font-size: 0.8rem;
-}
-
-.status-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-.dot-active   { background: var(--accent-glow); box-shadow: 0 0 8px var(--accent-glow); animation: pulse 1.5s infinite; }
-.dot-done     { background: var(--success); }
-.dot-pending  { background: var(--border); }
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.4; }
-}
-
-/* ── Chat ── */
-.chat-container {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.25rem;
-    max-height: 420px;
-    overflow-y: auto;
-    margin-bottom: 1rem;
-}
-
-.chat-msg {
-    margin-bottom: 1rem;
+/* ── Empty state ── */
+.empty-state {
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    align-items: center;
+    justify-content: center;
+    padding: 5rem 2rem 4rem;
+    text-align: center;
+    gap: 0.75rem;
 }
-
-.chat-label {
-    font-size: 0.65rem;
-    font-weight: 700;
-    letter-spacing: 0.15em;
+.empty-glyph {
+    font-family: var(--mono);
+    font-size: 2.8rem;
+    color: var(--text-dim);
+    line-height: 1;
+    opacity: 0.4;
+}
+.empty-title {
+    font-family: var(--mono);
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-mid);
+}
+.empty-hint {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    max-width: 320px;
+    line-height: 1.7;
+}
+.pill-row {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 0.5rem;
+}
+.pill {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
+    padding: 0.25rem 0.7rem;
+    border-radius: 3px;
+    border: 1px solid;
 }
-
-.chat-bubble {
-    display: inline-block;
-    padding: 0.6rem 1rem;
-    border-radius: 10px;
-    font-size: 0.85rem;
-    line-height: 1.6;
-    max-width: 90%;
-}
-
-.user-label  { color: var(--accent-glow); }
-.bot-label   { color: var(--accent-2); }
-
-.user-bubble { background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.25); align-self: flex-end; }
-.bot-bubble  { background: rgba(6,182,212,0.1);  border: 1px solid rgba(6,182,212,0.2);   align-self: flex-start; }
+.pill-a { color: var(--amber); border-color: rgba(232,162,69,0.3); background: var(--amber-glow); }
+.pill-t { color: var(--teal);  border-color: rgba(62,207,178,0.25); background: var(--teal-dim); }
+.pill-r { color: var(--text-mid); border-color: var(--border); background: var(--surface-2); }
 
 /* ── Divider ── */
 hr {
     border: none !important;
     border-top: 1px solid var(--border) !important;
-    margin: 1.5rem 0 !important;
+    margin: 1.25rem 0 !important;
 }
 
-/* ── Transcript box ── */
-.transcript-box {
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 1.25rem;
-    font-size: 0.82rem;
-    line-height: 1.8;
-    max-height: 300px;
-    overflow-y: auto;
-    color: var(--text-muted);
-    white-space: pre-wrap;
-    word-break: break-word;
+/* ── Streamlit overrides ── */
+.stProgress > div > div > div { background: var(--amber) !important; }
+.stSpinner > div { border-top-color: var(--amber) !important; }
+[data-testid="stMarkdownContainer"] p { color: var(--text) !important; font-family: var(--mono) !important; }
+.stAlert { border-radius: var(--radius) !important; font-family: var(--mono) !important; font-size: 0.82rem !important; }
+[data-testid="stExpander"] { border: 1px solid var(--border) !important; border-radius: var(--radius-lg) !important; background: var(--surface) !important; }
+[data-testid="stExpander"] summary { font-family: var(--mono) !important; font-size: 0.8rem !important; color: var(--text-mid) !important; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--amber); }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+    .hero-title { font-size: 1.4rem !important; }
+    .card { padding: 0.9rem 1rem; }
 }
-
-/* ── Stale Streamlit elements ── */
-.stProgress > div > div > div { background: var(--accent) !important; }
-.stSpinner > div { border-top-color: var(--accent) !important; }
-[data-testid="stMarkdownContainer"] p { color: var(--text) !important; }
-label { color: var(--text-muted) !important; font-size: 0.8rem !important; }
-
-/* scrollbar */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 </style>
 """, unsafe_allow_html=True)
 
-# ─── Session State Init ──────────────────────────────────────────────────────────
-for key, default in {
+# ──────────────────────────────────────────────────────────────────────────────
+# SESSION STATE
+# ──────────────────────────────────────────────────────────────────────────────
+_DEFAULTS = {
     "result": None,
     "chat_history": [],
-    "processing": False,
     "pipeline_done": False,
     "pipeline_steps": {},
-}.items():
-    if key not in st.session_state:
-        st.session_state[key] = default
+}
+for _k, _v in _DEFAULTS.items():
+    if _k not in st.session_state:
+        st.session_state[_k] = _v
 
-# ─── Helpers ────────────────────────────────────────────────────────────────────
-def step_status(steps: dict, key: str) -> str:
-    s = steps.get(key, "pending")
-    if s == "active":  return "dot-active"
-    if s == "done":    return "dot-done"
-    return "dot-pending"
+# ──────────────────────────────────────────────────────────────────────────────
+# HELPERS
+# ──────────────────────────────────────────────────────────────────────────────
+_PIPELINE_STEPS = [
+    ("audio",      "01", "Audio extract"),
+    ("transcript", "02", "Transcription"),
+    ("title",      "03", "Title generation"),
+    ("summary",    "04", "Summarisation"),
+    ("extract",    "05", "Item extraction"),
+    ("rag",        "06", "RAG indexing"),
+]
 
-def render_step_bar(label: str, key: str, icon: str):
-    css = step_status(st.session_state.pipeline_steps, key)
-    st.markdown(f"""
-    <div class="status-bar">
-        <div class="status-dot {css}"></div>
-        <span>{icon} {label}</span>
-    </div>""", unsafe_allow_html=True)
+def _step_class(key: str) -> str:
+    s = st.session_state.pipeline_steps.get(key, "pending")
+    return s  # "pending" | "active" | "done"
 
-# ─── Sidebar ────────────────────────────────────────────────────────────────────
+def _render_pipeline_steps():
+    for key, idx, label in _PIPELINE_STEPS:
+        cls = _step_class(key)
+        row_class = "step-row active" if cls == "active" else ("step-row done" if cls == "done" else "step-row")
+        pip_class  = f"pip {cls}"
+        st.markdown(
+            f'<div class="{row_class}">'
+            f'<div class="{pip_class}"></div>'
+            f'<span style="opacity:0.45;margin-right:0.25rem">{idx}</span>{label}'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+def _safe(text: str) -> str:
+    """Escape user-supplied text before embedding in HTML."""
+    return html.escape(str(text))
+
+def _update_step(key: str, state: str):
+    st.session_state.pipeline_steps[key] = state
+
+# ──────────────────────────────────────────────────────────────────────────────
+# SIDEBAR
+# ──────────────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown('<div class="hero-title" style="font-size:1.6rem">🎬 AI<br>Video</div>', unsafe_allow_html=True)
-    st.markdown('<div class="hero-sub">Meeting Intelligence</div>', unsafe_allow_html=True)
-    st.markdown("---")
+    st.markdown(
+        '<div class="wordmark">'
+        '<div class="wordmark-glyph">◈</div>MERIDIAN</div>'
+        '<div class="wordmark-sub">Meeting Intelligence</div>',
+        unsafe_allow_html=True,
+    )
 
-    st.markdown('<span class="badge badge-purple">Input</span>', unsafe_allow_html=True)
-    source = st.text_input("YouTube URL or File Path", placeholder="https://youtube.com/watch?v=... or /path/to/file.mp4")
+    st.markdown('<div class="section-label">Source</div>', unsafe_allow_html=True)
+    source = st.text_input(
+        "URL or path",
+        placeholder="https://youtube.com/watch?v=… or /path/to/file.mp4",
+        label_visibility="collapsed",
+    )
 
-    language = st.selectbox("Language", ["english", "hinglish"], index=0)
+    st.markdown('<div class="section-label" style="margin-top:0.75rem">Language</div>', unsafe_allow_html=True)
+    language = st.selectbox(
+        "Language",
+        options=["english", "hinglish"],
+        index=0,
+        label_visibility="collapsed",
+    )
 
-    run_btn = st.button("⚡  Analyse", use_container_width=True)
+    run_btn = st.button("⬡  Run Analysis", use_container_width=True)
 
     if st.session_state.pipeline_done:
         st.markdown("---")
-        st.markdown('<span class="badge badge-green">Pipeline Status</span>', unsafe_allow_html=True)
-        for step, icon, label in [
-            ("audio",      "🔊", "Audio Processing"),
-            ("transcript", "📝", "Transcription"),
-            ("title",      "🏷️", "Title Generation"),
-            ("summary",    "📋", "Summarisation"),
-            ("extract",    "🔍", "Extraction"),
-            ("rag",        "🧠", "RAG Engine"),
-        ]:
-            render_step_bar(label, step, icon)
+        st.markdown('<div class="section-label">Pipeline Log</div>', unsafe_allow_html=True)
+        _render_pipeline_steps()
 
-# ─── Main Area ──────────────────────────────────────────────────────────────────
-st.markdown('<div class="hero-title">AI Video Assistant</div>', unsafe_allow_html=True)
-st.markdown('<div class="hero-sub">Transcribe · Summarise · Chat with your meetings</div>', unsafe_allow_html=True)
-st.markdown("---")
+# ──────────────────────────────────────────────────────────────────────────────
+# MAIN AREA — HERO
+# ──────────────────────────────────────────────────────────────────────────────
+st.markdown(
+    '<div class="hero">'
+    '<div class="hero-eyebrow">v2.0 · AI PLATFORM</div>'
+    '<div class="hero-title">Meeting<span>.</span><br>Intelligence<span>.</span></div>'
+    '<div class="hero-sub">Transcribe · Summarise · Chat with your recordings</div>'
+    '</div>',
+    unsafe_allow_html=True,
+)
+st.markdown("<hr>", unsafe_allow_html=True)
 
-# ── Run Pipeline ────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────────────
+# PIPELINE EXECUTION
+# ──────────────────────────────────────────────────────────────────────────────
 if run_btn:
-    if not source.strip():
-        st.error("Please enter a YouTube URL or file path.")
+    raw_source = source.strip() if source else ""
+
+    # ── Input validation ──
+    if not raw_source:
+        st.error("⚠  Enter a YouTube URL or a local file path to continue.")
     else:
+        # Reset state for fresh run
         st.session_state.pipeline_done = False
         st.session_state.result = None
         st.session_state.chat_history = []
         st.session_state.pipeline_steps = {}
 
-        progress_placeholder = st.empty()
-
-        def update_step(key, state):
-            st.session_state.pipeline_steps[key] = state
+        status_ph = st.empty()
 
         try:
-            with progress_placeholder.container():
-                st.info("⚙️ Pipeline running — see sidebar for live status…")
+            with status_ph.container():
+                st.info("Pipeline initialised — live status in the sidebar.")
 
-            update_step("audio", "active")
-            chunks = process_input(source)
-            update_step("audio", "done")
+            _update_step("audio", "active")
+            chunks = process_input(raw_source)
+            _update_step("audio", "done")
 
-            update_step("transcript", "active")
+            _update_step("transcript", "active")
             transcript = transcribe_all(chunks, language)
-            update_step("transcript", "done")
+            _update_step("transcript", "done")
 
-            update_step("title", "active")
+            _update_step("title", "active")
             title = generate_title(transcript)
-            update_step("title", "done")
+            _update_step("title", "done")
 
-            update_step("summary", "active")
+            _update_step("summary", "active")
             summary = summarize(transcript)
-            update_step("summary", "done")
+            _update_step("summary", "done")
 
-            update_step("extract", "active")
-            action_items  = extract_action_items(transcript)
-            decisions     = extract_key_decisions(transcript)
-            questions     = extract_questions(transcript)
-            update_step("extract", "done")
+            _update_step("extract", "active")
+            action_items = extract_action_items(transcript)
+            decisions    = extract_key_decisions(transcript)
+            questions    = extract_questions(transcript)
+            _update_step("extract", "done")
 
-            update_step("rag", "active")
+            _update_step("rag", "active")
             rag_chain = build_rag_chain(transcript)
-            update_step("rag", "done")
+            _update_step("rag", "done")
 
             st.session_state.result = {
-                "title": title,
-                "transcript": transcript,
-                "summary": summary,
-                "action_items": action_items,
-                "key_decisions": decisions,
+                "title":          title,
+                "transcript":     transcript,
+                "summary":        summary,
+                "action_items":   action_items,
+                "key_decisions":  decisions,
                 "open_questions": questions,
-                "rag_chain": rag_chain,
+                "rag_chain":      rag_chain,
             }
             st.session_state.pipeline_done = True
-            progress_placeholder.success("✅ Analysis complete!")
-            time.sleep(0.5)
-            progress_placeholder.empty()
+            status_ph.success("✓  Analysis complete.")
+            time.sleep(0.6)
+            status_ph.empty()
             st.rerun()
 
-        except Exception as e:
-            for k in ["audio","transcript","title","summary","extract","rag"]:
+        except Exception as exc:
+            # Mark any active step as pending so the sidebar doesn't freeze
+            for k, _, _ in _PIPELINE_STEPS:
                 if st.session_state.pipeline_steps.get(k) == "active":
                     st.session_state.pipeline_steps[k] = "pending"
-            progress_placeholder.error(f"❌ Error: {e}")
+            status_ph.error(f"Pipeline error: {exc}")
 
-# ── Results ──────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────────────
+# RESULTS
+# ──────────────────────────────────────────────────────────────────────────────
 if st.session_state.result:
     r = st.session_state.result
 
-    # Title banner
-    st.markdown(f"""
-    <div class="card">
-        <div class="card-title">📌 Session Title</div>
-        <div style="font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:700;color:var(--text)">
-            {r['title']}
-        </div>
-    </div>""", unsafe_allow_html=True)
+    # ── Session banner ──
+    st.markdown(
+        f'<div class="session-banner">'
+        f'<span class="session-id">Session</span>'
+        f'<span class="session-title-text">{_safe(r["title"])}</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
-    # Top row: summary + transcript
-    col1, col2 = st.columns([3, 2], gap="medium")
+    # ── Row 1 : Summary + Transcript ──
+    col_sum, col_tx = st.columns([3, 2], gap="medium")
 
-    with col1:
-        st.markdown(f"""
-        <div class="card">
-            <div class="card-title">📋 Summary</div>
-            <div class="card-content">{r['summary']}</div>
-        </div>""", unsafe_allow_html=True)
+    with col_sum:
+        st.markdown(
+            f'<div class="card">'
+            f'<div class="card-accent"></div>'
+            f'<div class="card-label">◈ Summary</div>'
+            f'<div class="card-body">{_safe(r["summary"])}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
-    with col2:
-        with st.expander("📝 Full Transcript", expanded=False):
-            st.markdown(f'<div class="transcript-box">{r["transcript"]}</div>', unsafe_allow_html=True)
+    with col_tx:
+        with st.expander("Full Transcript", expanded=False):
+            st.markdown(
+                f'<div class="transcript-scroll">{_safe(r["transcript"])}</div>',
+                unsafe_allow_html=True,
+            )
 
-    # Second row: action items | decisions | questions
+    # ── Row 2 : Three extraction columns ──
     c1, c2, c3 = st.columns(3, gap="medium")
 
-    with c1:
-        st.markdown(f"""
-        <div class="card">
-            <div class="card-title">✅ Action Items</div>
-            <div class="card-content">{r['action_items']}</div>
-        </div>""", unsafe_allow_html=True)
+    _extractions = [
+        (c1, "▸ Action Items",  r["action_items"],   ""),
+        (c2, "◆ Key Decisions", r["key_decisions"],  "teal"),
+        (c3, "? Open Questions",r["open_questions"], "red"),
+    ]
+    for col, label, body, accent in _extractions:
+        with col:
+            st.markdown(
+                f'<div class="card">'
+                f'<div class="card-accent {accent}"></div>'
+                f'<div class="card-label">{label}</div>'
+                f'<div class="card-body">{_safe(body)}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
 
-    with c2:
-        st.markdown(f"""
-        <div class="card">
-            <div class="card-title">🔑 Key Decisions</div>
-            <div class="card-content">{r['key_decisions']}</div>
-        </div>""", unsafe_allow_html=True)
+    st.markdown("<hr>", unsafe_allow_html=True)
 
-    with c3:
-        st.markdown(f"""
-        <div class="card">
-            <div class="card-title">❓ Open Questions</div>
-            <div class="card-content">{r['open_questions']}</div>
-        </div>""", unsafe_allow_html=True)
+    # ── RAG Chat ──
+    st.markdown(
+        '<div class="chat-heading">◈ Chat with your Meeting</div>',
+        unsafe_allow_html=True,
+    )
 
-    st.markdown("---")
-
-    # ── RAG Chat ──────────────────────────────────────────────────────────────
-    st.markdown('<div style="font-family:\'Syne\',sans-serif;font-size:1.2rem;font-weight:700;margin-bottom:1rem">💬 Chat with your Meeting</div>', unsafe_allow_html=True)
-
-    # Chat history display
     if st.session_state.chat_history:
-        chat_html = '<div class="chat-container">'
+        chat_html = '<div class="chat-wrap">'
         for msg in st.session_state.chat_history:
-            if msg["role"] == "user":
-                chat_html += f"""
-                <div class="chat-msg" style="align-items:flex-end">
-                    <span class="chat-label user-label">You</span>
-                    <div class="chat-bubble user-bubble">{msg['content']}</div>
-                </div>"""
+            role = msg.get("role", "")
+            content = _safe(msg.get("content", ""))
+            if role == "user":
+                chat_html += (
+                    f'<div class="cmsg">'
+                    f'<span class="cmsg-label you">You</span>'
+                    f'<div class="cbubble you">{content}</div>'
+                    f'</div>'
+                )
             else:
-                chat_html += f"""
-                <div class="chat-msg" style="align-items:flex-start">
-                    <span class="chat-label bot-label">🤖 Assistant</span>
-                    <div class="chat-bubble bot-bubble">{msg['content']}</div>
-                </div>"""
+                chat_html += (
+                    f'<div class="cmsg">'
+                    f'<span class="cmsg-label bot">◈ Meridian</span>'
+                    f'<div class="cbubble bot">{content}</div>'
+                    f'</div>'
+                )
         chat_html += '</div>'
         st.markdown(chat_html, unsafe_allow_html=True)
     else:
-        st.markdown("""
-        <div class="card" style="text-align:center;padding:2rem">
-            <div style="font-size:2rem;margin-bottom:0.5rem">💬</div>
-            <div style="color:var(--text-muted);font-size:0.85rem">Ask anything about your meeting transcript</div>
-        </div>""", unsafe_allow_html=True)
+        st.markdown(
+            '<div class="card" style="text-align:center;padding:1.75rem">'
+            '<div style="font-family:var(--mono);font-size:0.72rem;color:var(--text-dim);'
+            'letter-spacing:0.12em;text-transform:uppercase">'
+            'Ask anything about the meeting transcript'
+            '</div></div>',
+            unsafe_allow_html=True,
+        )
 
-    # Chat input
-    chat_col1, chat_col2 = st.columns([5, 1], gap="small")
-    with chat_col1:
-        user_input = st.text_input("Your question", placeholder="What were the main decisions made?", label_visibility="collapsed")
-    with chat_col2:
-        send_btn = st.button("Send →", use_container_width=True)
+    # Chat input row
+    inp_col, btn_col = st.columns([5, 1], gap="small")
+    with inp_col:
+        user_input = st.text_input(
+            "question",
+            placeholder="What decisions were made? Who owns the follow-ups?",
+            label_visibility="collapsed",
+            key="chat_input",
+        )
+    with btn_col:
+        send_btn = st.button("Send", use_container_width=True, key="send_btn")
 
-    if send_btn and user_input.strip():
+    if send_btn and user_input and user_input.strip():
+        query = user_input.strip()
         with st.spinner("Thinking…"):
-            answer = ask_question(r["rag_chain"], user_input.strip())
-        st.session_state.chat_history.append({"role": "user",      "content": user_input.strip()})
+            try:
+                answer = ask_question(r["rag_chain"], query)
+            except Exception as exc:
+                answer = f"[Error retrieving answer: {exc}]"
+        st.session_state.chat_history.append({"role": "user",      "content": query})
         st.session_state.chat_history.append({"role": "assistant", "content": answer})
         st.rerun()
 
     if st.session_state.chat_history:
-        if st.button("🗑️ Clear Chat", type="secondary"):
+        if st.button("Clear conversation", type="secondary"):
             st.session_state.chat_history = []
             st.rerun()
 
+# ──────────────────────────────────────────────────────────────────────────────
+# EMPTY STATE
+# ──────────────────────────────────────────────────────────────────────────────
 else:
-    # Empty state
-    st.markdown("""
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:5rem 2rem;text-align:center">
-        <div style="font-size:4rem;margin-bottom:1rem">🎬</div>
-        <div style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:700;color:var(--text);margin-bottom:0.5rem">
-            Ready to Analyse
-        </div>
-        <div style="color:var(--text-muted);font-size:0.85rem;max-width:380px;line-height:1.7">
-            Paste a YouTube URL or local file path in the sidebar, choose your language, and hit <strong>Analyse</strong> to get started.
-        </div>
-        <div style="margin-top:2rem;display:flex;gap:1rem;flex-wrap:wrap;justify-content:center">
-            <span class="badge badge-purple">Transcription</span>
-            <span class="badge badge-cyan">Summarisation</span>
-            <span class="badge badge-green">RAG Chat</span>
-        </div>
-    </div>""", unsafe_allow_html=True)
+    st.markdown(
+        '<div class="empty-state">'
+        '<div class="empty-glyph">◈</div>'
+        '<div class="empty-title">Nothing analysed yet</div>'
+        '<div class="empty-hint">'
+        'Paste a YouTube URL or local file path in the sidebar,<br>'
+        'choose the audio language, then hit <strong>Run Analysis</strong>.'
+        '</div>'
+        '<div class="pill-row">'
+        '<span class="pill pill-a">Transcription</span>'
+        '<span class="pill pill-t">Summarisation</span>'
+        '<span class="pill pill-r">RAG Chat</span>'
+        '<span class="pill pill-r">Action Items</span>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
