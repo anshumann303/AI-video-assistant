@@ -6,6 +6,7 @@
 # ── Audio / Video Download ───────────────────────────────────
 yt-dlp>=2024.4.9               # Download audio from YouTube URLs
 pydub>=0.25.1                  # Audio slicing / format conversion
+pyaudioop>=0.0.1               # Required by pydub on some Python/Linux builds
 ffmpeg-python>=0.2.0           # FFmpeg bindings (ffmpeg binary required separately)
 
 # ── Speech-to-Text (local Whisper) ───────────────────────────
