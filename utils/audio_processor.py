@@ -1,9 +1,10 @@
 import yt_dlp
-from pydub import AudioSegment
+import ffmpeg
 import os
+import wave
 
 DOWNLOAD_DIR = 'downloades'
-os.makedirs(DOWNLOAD_DIR,exist_ok = True)
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 def download_youtube_audio(url :str) ->str:
     output_path = os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s")
@@ -27,28 +28,38 @@ def download_youtube_audio(url :str) ->str:
 
 
 def convert_to_wav(input_path: str) -> str:
-    """Convert any audio/video file to WAV format using pydub."""
+    """Convert any audio/video file to WAV format using ffmpeg."""
     output_path = os.path.splitext(input_path)[0] + "_converted.wav"
-    audio = AudioSegment.from_file(input_path)
-    audio = audio.set_channels(1).set_frame_rate(16000) #16khz
-    audio.export(output_path, format="wav")
+    (
+        ffmpeg.input(input_path)
+        .output(output_path, format="wav", ac=1, ar=16000)
+        .overwrite_output()
+        .run(quiet=True)
+    )
     return output_path
 
 
+def chunk_audio(wav_path: str, chunk_minutes: int = 10) -> list:
+    chunk_ms = chunk_minutes * 60 * 1000
 
-def chunk_audio(wav_path : str , chunk_minutes : int = 10) -> list:
-    audio = AudioSegment.from_wav(wav_path)
-    chunk_ms = chunk_minutes * 60 * 1000 
+    with wave.open(wav_path, "rb") as source:
+        params = source.getparams()
+        frame_rate = source.getframerate()
+        total_frames = source.getnframes()
+        chunk_frames = int(chunk_ms * frame_rate / 1000)
 
-    chunks = []
+        chunks = []
+        for i, start_frame in enumerate(range(0, total_frames, chunk_frames)):
+            source.setpos(start_frame)
+            frames = source.readframes(chunk_frames)
 
-    for i, start in enumerate(range(0,len(audio),chunk_ms)):
-        chunk = audio[start : start + chunk_ms]
-        chunk_path = f"{wav_path}_chunk_{i}.wav"
-        chunk.export(chunk_path , format = "wav")
+            chunk_path = f"{wav_path}_chunk_{i}.wav"
+            with wave.open(chunk_path, "wb") as out_f:
+                out_f.setparams(params)
+                out_f.writeframes(frames)
 
-        chunks.append(chunk_path)
-    
+            chunks.append(chunk_path)
+
     return chunks
 
 def process_input(source: str) -> list:

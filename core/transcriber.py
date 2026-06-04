@@ -1,7 +1,7 @@
 import whisper
 import os
 import requests
-from pydub import AudioSegment
+import wave
 
 # Sarvam's sync STT-translate API rejects audio longer than 30s.
 # We slice each chunk into 25s pieces (with a 5s safety margin) before sending.
@@ -60,6 +60,23 @@ def _send_to_sarvam(piece_path: str) -> str:
     return response.json().get("transcript", "")
 
 
+def _wav_piece_paths(chunk_path: str, piece_ms: int):
+    with wave.open(chunk_path, "rb") as source:
+        params = source.getparams()
+        frame_rate = source.getframerate()
+        total_frames = source.getnframes()
+        piece_frames = int(piece_ms * frame_rate / 1000)
+
+        for i, start_frame in enumerate(range(0, total_frames, piece_frames)):
+            source.setpos(start_frame)
+            frames = source.readframes(piece_frames)
+            piece_path = f"{chunk_path}_sv_{i}.wav"
+            with wave.open(piece_path, "wb") as out_f:
+                out_f.setparams(params)
+                out_f.writeframes(frames)
+            yield piece_path
+
+
 def transcribe_chunk_sarvam(chunk_path: str) -> str:
     """
     Sarvam sync API only accepts ≤30s audio. We split this chunk into
@@ -68,17 +85,13 @@ def transcribe_chunk_sarvam(chunk_path: str) -> str:
     if not SARVAM_API_KEY:
         raise RuntimeError("SARVAM_API_KEY is not set in environment / .env")
 
-    audio = AudioSegment.from_wav(chunk_path)
     piece_ms = SARVAM_PIECE_SECONDS * 1000
+    piece_paths = list(_wav_piece_paths(chunk_path, piece_ms))
 
     full_text = ""
-    total_pieces = (len(audio) + piece_ms - 1) // piece_ms
+    total_pieces = len(piece_paths)
 
-    for i, start in enumerate(range(0, len(audio), piece_ms)):
-        piece = audio[start: start + piece_ms]
-        piece_path = f"{chunk_path}_sv_{i}.wav"
-        piece.export(piece_path, format="wav")
-
+    for i, piece_path in enumerate(piece_paths):
         try:
             print(f"  → Sarvam piece {i + 1}/{total_pieces} ...")
             full_text += _send_to_sarvam(piece_path) + " "
